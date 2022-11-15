@@ -5,10 +5,14 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Properties;
+import java.util.concurrent.ExecutionException;
 
 public class FraudDetectorService {
+
+    private final KafkaDispatcher<Order> dispatcher = new KafkaDispatcher<Order>();
     public static void main(String[] args) {
         FraudDetectorService fraudDetectorService = new FraudDetectorService();
         try(KafkaService service = new KafkaService<Order>(FraudDetectorService.class.getName(),
@@ -18,7 +22,7 @@ public class FraudDetectorService {
         }
     }
 
-    private void Callback(ConsumerRecord<String, Order> record) {
+    private void Callback(ConsumerRecord<String, Order> record) throws ExecutionException, InterruptedException {
         System.out.println("==============================================================");
         System.out.println("Precossing new order, checking for fraud");
         System.out.println(record.key());
@@ -30,7 +34,19 @@ public class FraudDetectorService {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        System.out.println("Order processed");
+        var order = record.value();
+        if (isFraud(order)) {
+            System.out.println("Order is a fraud" + order);
+            dispatcher.send("ECOMMERCE_ORDER_REJECTED", order.getUserId(), order);
+        } else {
+            System.out.println("Approved: " + order);
+            dispatcher.send("ECOMMERCE_ORDER_APPROVED", order.getUserId(), order);
+
+        }
+    }
+
+    private boolean isFraud(Order order) {
+        return order.getAmount().compareTo(new BigDecimal("4500")) >= 0;
     }
 
     public static Properties properties() {
