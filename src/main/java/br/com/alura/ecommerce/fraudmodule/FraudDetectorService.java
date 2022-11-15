@@ -1,6 +1,9 @@
-package br.com.alura.ecommerce;
+package br.com.alura.ecommerce.fraudmodule;
 
-import br.com.alura.ecommerce.Modelos.Order;
+import br.com.alura.ecommerce.KafkaDispatcher;
+import br.com.alura.ecommerce.KafkaService;
+
+import br.com.alura.ecommerce.fraudmodule.modelo.Order;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -37,10 +40,10 @@ public class FraudDetectorService {
         var order = record.value();
         if (isFraud(order)) {
             System.out.println("Order is a fraud" + order);
-            dispatcher.send("ECOMMERCE_ORDER_REJECTED", order.getUserId(), order);
+            dispatcher.send("ECOMMERCE_ORDER_REJECTED", order.getEmail(), order);
         } else {
             System.out.println("Approved: " + order);
-            dispatcher.send("ECOMMERCE_ORDER_APPROVED", order.getUserId(), order);
+            dispatcher.send("ECOMMERCE_ORDER_APPROVED", order.getEmail(), order);
 
         }
     }
